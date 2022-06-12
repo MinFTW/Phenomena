@@ -17,7 +17,7 @@ async function dropTables() {
   try {
     console.log('Starting to drop tables...');
     
-    client.query(`
+    await client.query(`
       DROP TABLE IF EXISTS comments;
       DROP TABLE IF EXISTS reports;
     `);

@@ -1,10 +1,10 @@
+// Require the Client constructor from the pg package
 const { Client } = require('pg');
-
 // Create a constant, CONNECTION_STRING, from either process.env.DATABASE_URL or postgres://localhost:5432/phenomena-dev
-
+const CONNECTION_STRING = process.env.DATABASE_URL || 'postgres://localhost:5432/phenomena-dev';
 // Create the client using new Client(CONNECTION_STRING)
 // Do not connect to the client in this file!
-
+const client = new Client(CONNECTION_STRING);
 /**
  * Report Related Methods
  */
@@ -20,11 +20,19 @@ const { Client } = require('pg');
 async function getOpenReports() {
   try {
     // first load all of the reports which are open
-    
+    const { rows: [...reports] } = await client.query(`
+      SELECT *
+      FROM reports
+      WHERE "isOpen" = true;
+    `)
 
     // then load the comments only for those reports, using a
     // WHERE "reportId" IN () clause
-
+    const { rows: [comments] } = await client.query(`
+      SELECT *
+      FROM comments
+      WHERE "reportId" IN (1);
+    `)
     
     // then, build two new properties on each report:
     // .comments for the comments which go with it
@@ -32,10 +40,17 @@ async function getOpenReports() {
     // .isExpired if the expiration date is before now
     //    you can use Date.parse(report.expirationDate) < new Date()
     // also, remove the password from all reports
+    
+    for (const report of reports) {
+      report.comments = [comments];
 
+      report.isExpired = (Date.parse(report.expirationDate) < new Date()) ? true : false;
 
+      delete report.password
+    }
+    
     // finally, return the reports
-  
+    return reports;
 
   } catch (error) {
     throw error;
@@ -55,20 +70,29 @@ async function getOpenReports() {
  */
 async function createReport(reportFields) {
   // Get all of the fields from the passed in object
-  console.log(reportFields);
   const { title, location, description, password } = reportFields;
-
+  
   try {
     // insert the correct fields into the reports table
     // remember to return the new row from the query
-    
+    const { rows: [report] } = await client.query(`
+      INSERT INTO reports (title, location, description, password)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *;
+    `, [title, location, description, password]);
 
     // remove the password from the returned row
-    
+    const newReport = {
+      id: report.id,
+      title: report.title,
+      location: report.location,
+      description: report.description,
+      isOpen: report.isOpen,
+      expirationDate: report.expirationDate
+    };  
 
     // return the new report
-    
-
+    return newReport;
   } catch (error) {
     throw error;
   }
@@ -148,31 +172,50 @@ async function closeReport(reportId, password) {
  */
 async function createReportComment(reportId, commentFields) {
   // read off the content from the commentFields
-
+  const { content } = commentFields;
 
   try {
     // grab the report we are going to be commenting on
-
+    const { rows: [report] } = await client.query(`
+      SELECT *
+      FROM reports
+      WHERE id = ${reportId}
+    `)
 
     // if it wasn't found, throw an error saying so
-    
+    if(!report) {
+      throw {
+        name: 'ReportNotFoundError',
+        message: 'That report does not exist, no comment has been made'
+      }
+    }
 
     // if it is not open, throw an error saying so
-    
+    if (!report.isOpen) {
+      throw {
+        name: 'ReportNotOpenError',
+        message: 'That report is not open, no comment has been made'
+      }
+    }
 
     // if the current date is past the expiration, throw an error saying so
     // you can use Date.parse(report.expirationDate) < new Date() to check
-    
+    if (Date.parse(report.expirationDate) < new Date()) {
+      throw {
+        name: 'ReportExpiredError',
+        message: 'That report is expired, no comment has been made'
+      }
+    }
 
     // all go: insert a comment
-    
+
 
     // then update the expiration date to a day from now
     
 
     // finally, return the comment
     
-
+    
   } catch (error) {
     throw error;
   }
@@ -180,7 +223,7 @@ async function createReportComment(reportId, commentFields) {
 
 // export the client and all database functions below
 module.exports = { 
-  Client,
+  client,
   getOpenReports,
   createReport,
   _getReport,
