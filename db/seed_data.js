@@ -41,7 +41,7 @@ async function buildTables() {
     await client.query(`
       CREATE TABLE reports(
         id SERIAL PRIMARY KEY,
-        title varchar(255) NOT NULL,
+        title VARCHAR(255) NOT NULL,
         location VARCHAR(255) NOT NULL,
         description TEXT NOT NULL,
         password VARCHAR(255) NOT NULL,
