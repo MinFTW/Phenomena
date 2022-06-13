@@ -7,10 +7,10 @@ const express = require('express');
 const server = express();
 // Require morgan and body-parser middleware
 const morgan = require('morgan');
-const bodyParser = require('body-parser')
+const bodyParser = require('body-parser');
 // Have the server use morgan with setting 'dev'
 server.use(morgan('dev'));
-// Import cors 
+// Import cors
 // Have the server use cors()
 const cors = require('cors');
 server.use(cors());
@@ -21,26 +21,23 @@ server.use('/api', require('./api'));
 // Import the client from your db/index.js
 const { client } = require('./db');
 // Create custom 404 handler that sets the status code to 404.
-server.use((err, req, res, next) => {
-    console.error(err.stack);
-  
-    res.status(404);
+server.get('*', (req, res, next) => {
+  res.status(404).send('Page not found');
 });
+
 // Create custom error handling that sets the status code to 500
 // and returns the error as an object
 server.use((err, req, res, next) => {
-    console.error(err.stack);
-  
-    res.status(500);
-    return err;
+  console.error(err.message);
+  res.status(500).send('Request failed with status code 500');
+
+  return err;
 });
 
 // Start the server listening on port PORT
 // On success, connect to the database
 server.listen(PORT, () => {
-    console.log('The server is up on port', PORT);
+  console.log('The server is up on port', PORT);
 
-    if (PORT) {
-        client.connect();
-    }
+  if (PORT) client.connect();
 });
