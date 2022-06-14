@@ -4,6 +4,8 @@ Your job, should you accept it, is to build and deploy an API for a top secret m
 
 Project Phenomena is about providing a safe place for people to anonymously discuss the paranormal, to that end we intend to provide the following things:
 
+LIVE DEMO: https://cryptic-fortress-96748.herokuapp.com/api/reports
+
 ## Endpoints
 
 ### `GET /api/reports`
